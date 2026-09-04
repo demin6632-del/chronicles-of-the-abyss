@@ -67,6 +67,13 @@ jobs:
                   versionCode 1
                   versionName '1.0'
               }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      signingConfig signingConfigs.debug
+                  }
+              }
           }
           EOF
 
@@ -136,11 +143,19 @@ jobs:
           }
           EOF
 
-      - name: Build debug APK
-        run: gradle --no-daemon assembleDebug
+      - name: Build release APK
+        run: gradle --no-daemon assembleRelease
 
-      - name: Upload APK
+      - name: Rename release APK
+        run: cp app/build/outputs/apk/release/app-release.apk ChroniclesOfTheAbyss-release.apk
+
+      - name: Generate SHA-256
+        run: sha256sum ChroniclesOfTheAbyss-release.apk > ChroniclesOfTheAbyss-release.apk.sha256
+
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: ChroniclesOfTheAbyss-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: ChroniclesOfTheAbyss-Release
+          path: |
+            ChroniclesOfTheAbyss-release.apk
+            ChroniclesOfTheAbyss-release.apk.sha256
