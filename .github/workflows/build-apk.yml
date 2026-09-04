@@ -5,6 +5,10 @@ on:
   push:
     branches: [ main ]
 
+env:
+  APP_ID: com.chroniclesoftheabyss.game
+  APP_NAME: Хроники Бездны
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -72,6 +76,9 @@ jobs:
           cat > app/build.gradle <<'EOF'
           plugins { id 'com.android.application' }
 
+          def releaseVersionCode = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as Integer
+          def releaseVersionName = "1.${releaseVersionCode}"
+
           android {
               namespace 'com.chroniclesoftheabyss.game'
               compileSdk 35
@@ -80,8 +87,8 @@ jobs:
                   applicationId 'com.chroniclesoftheabyss.game'
                   minSdk 23
                   targetSdk 35
-                  versionCode 1
-                  versionName '1.0'
+                  versionCode releaseVersionCode
+                  versionName releaseVersionName
               }
 
               signingConfigs {
@@ -167,6 +174,17 @@ jobs:
               }
           }
           EOF
+
+      - name: Verify signing secrets
+        shell: bash
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          test -n "${RELEASE_STORE_PASSWORD:-}"
+          test -n "${RELEASE_KEY_ALIAS:-}"
+          test -n "${RELEASE_KEY_PASSWORD:-}"
 
       - name: Build release APK
         env:
