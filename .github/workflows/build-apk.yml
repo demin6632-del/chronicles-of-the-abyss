@@ -31,8 +31,24 @@ jobs:
         run: |
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Prepare permanent Release signing key
+        shell: bash
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "${RELEASE_KEYSTORE_BASE64:-}" ]; then
+            echo "ERROR: GitHub Secret RELEASE_KEYSTORE_BASE64 is not configured."
+            exit 1
+          fi
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > release.keystore
+          test -s release.keystore
+
       - name: Create Android project
         shell: bash
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           mkdir -p app/src/main/java/com/chroniclesoftheabyss/game
           mkdir -p app/src/main/assets/game
@@ -68,10 +84,19 @@ jobs:
                   versionName '1.0'
               }
 
+              signingConfigs {
+                  release {
+                      storeFile file('../release.keystore')
+                      storePassword System.getenv('RELEASE_STORE_PASSWORD')
+                      keyAlias System.getenv('RELEASE_KEY_ALIAS')
+                      keyPassword System.getenv('RELEASE_KEY_PASSWORD')
+                  }
+              }
+
               buildTypes {
                   release {
                       minifyEnabled false
-                      signingConfig signingConfigs.debug
+                      signingConfig signingConfigs.release
                   }
               }
           }
@@ -144,6 +169,10 @@ jobs:
           EOF
 
       - name: Build release APK
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: gradle --no-daemon assembleRelease
 
       - name: Rename release APK
@@ -159,3 +188,7 @@ jobs:
           path: |
             ChroniclesOfTheAbyss-release.apk
             ChroniclesOfTheAbyss-release.apk.sha256
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f release.keystore
