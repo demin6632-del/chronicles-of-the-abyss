@@ -49,6 +49,10 @@ jobs:
           rootProject.name = 'ChroniclesOfTheAbyss'
           include ':app'
           EOT
+          cat > gradle.properties <<'EOT'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOT
           cat > build.gradle <<'EOT'
           plugins { id 'com.android.application' version '8.7.3' apply false }
           EOT
