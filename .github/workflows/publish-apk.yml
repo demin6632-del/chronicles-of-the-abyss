@@ -1,0 +1,42 @@
+name: Publish latest APK download
+
+on:
+  workflow_run:
+    workflows: ["Build APK"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ChroniclesOfTheAbyss-Release
+          path: release
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Publish stable APK link
+        shell: bash
+        run: |
+          set -e
+          test -s release/ChroniclesOfTheAbyss-release.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --orphan downloads
+          git rm -rf . || true
+          cp release/ChroniclesOfTheAbyss-release.apk ChroniclesOfTheAbyss.apk
+          git add ChroniclesOfTheAbyss.apk
+          git commit -m "Обновить APK для прямого скачивания"
+          git push origin downloads --force
