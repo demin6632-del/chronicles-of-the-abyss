@@ -75,8 +75,8 @@ jobs:
                   }
               }
               buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release } }
-              dependencies { implementation 'androidx.core:core:1.15.0' }
           }
+          dependencies { implementation 'androidx.core:core:1.15.0' }
           EOT
           cat > app/src/main/AndroidManifest.xml <<'EOT'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -108,6 +108,7 @@ jobs:
           cat > app/src/main/java/com/chroniclesoftheabyss/game/MainActivity.java <<'EOT'
           package com.chroniclesoftheabyss.game;
           import android.app.Activity;
+          import android.content.ClipData;
           import android.content.Intent;
           import android.graphics.Color;
           import android.net.Uri;
@@ -133,10 +134,7 @@ jobs:
                   root.setBackgroundColor(Color.BLACK);
                   webView=new WebView(this);
                   webView.setWebViewClient(new WebViewClient(){
-                      @Override public void onPageFinished(WebView view,String url){
-                          super.onPageFinished(view,url);
-                          injectShareButton();
-                      }
+                      @Override public void onPageFinished(WebView view,String url){ super.onPageFinished(view,url); injectShareButton(); }
                   });
                   WebSettings settings=webView.getSettings();
                   settings.setJavaScriptEnabled(true);
@@ -157,7 +155,7 @@ jobs:
                   String js="(function(){if(document.getElementById('androidShareButton'))return;var b=document.createElement('button');b.id='androidShareButton';b.type='button';b.textContent='↗';b.title='Поделиться игрой';b.setAttribute('aria-label','Поделиться игрой');b.style.cssText='position:fixed;right:72px;bottom:18px;z-index:100;width:48px;height:48px;border:1px solid #26334d;border-radius:50%;background:#111827;color:#eef2ff;font-size:25px;font-weight:900;box-shadow:0 8px 24px rgba(0,0,0,.35);touch-action:manipulation;';b.onclick=function(){AndroidBridge.shareGame();};document.body.appendChild(b);})();";
                   webView.evaluateJavascript(js,null);
               }
-              @JavascriptInterface public class AndroidBridge{
+              public class AndroidBridge{
                   @JavascriptInterface public void shareGame(){ runOnUiThread(()->shareInstalledApk()); }
               }
               private void shareInstalledApk(){
@@ -175,11 +173,9 @@ jobs:
                       send.putExtra(Intent.EXTRA_STREAM,uri);
                       send.putExtra(Intent.EXTRA_TITLE,"Хроники Бездны");
                       send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                      send.setClipData(android.content.ClipData.newRawUri("Хроники Бездны",uri));
+                      send.setClipData(ClipData.newRawUri("Хроники Бездны",uri));
                       startActivity(Intent.createChooser(send,"Поделиться игрой"));
-                  }catch(Exception e){
-                      Toast.makeText(this,"Не удалось подготовить игру для отправки",Toast.LENGTH_LONG).show();
-                  }
+                  }catch(Exception e){ Toast.makeText(this,"Не удалось подготовить игру для отправки",Toast.LENGTH_LONG).show(); }
               }
               @Override public void onBackPressed(){ if(webView.canGoBack()) webView.goBack(); else super.onBackPressed(); }
           }
