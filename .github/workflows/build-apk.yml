@@ -130,6 +130,8 @@ jobs:
           import java.io.FileInputStream;
           import java.io.FileOutputStream;
           import java.io.IOException;
+          import java.util.zip.ZipEntry;
+          import java.util.zip.ZipOutputStream;
           public class MainActivity extends Activity {
               private WebView webView;
               @Override protected void onCreate(Bundle savedInstanceState){
@@ -166,15 +168,23 @@ jobs:
                   try{
                       File dir=new File(getCacheDir(),"shared");
                       if(!dir.exists()&&!dir.mkdirs()) throw new IOException("Cannot create share directory");
-                      File apk=new File(dir,"ChroniclesOfTheAbyss.apk.zip");
+                      File apk=new File(dir,"ChroniclesOfTheAbyss.apk");
+                      File zip=new File(dir,"ChroniclesOfTheAbyss.apk.zip");
                       File source=new File(getApplicationInfo().sourceDir);
                       try(FileInputStream in=new FileInputStream(source);FileOutputStream out=new FileOutputStream(apk)){
                           byte[] buffer=new byte[8192]; int n; while((n=in.read(buffer))!=-1) out.write(buffer,0,n);
                       }
                       if(!apk.isFile() || apk.length()<=0) throw new IOException("APK copy is empty");
-                      Uri uri=FileProvider.getUriForFile(this,"com.chroniclesoftheabyss.game.fileprovider",apk);
+                      try(FileInputStream in=new FileInputStream(apk);FileOutputStream out=new FileOutputStream(zip);ZipOutputStream zos=new ZipOutputStream(out)){
+                          ZipEntry entry=new ZipEntry("ChroniclesOfTheAbyss.apk");
+                          zos.putNextEntry(entry);
+                          byte[] buffer=new byte[8192]; int n; while((n=in.read(buffer))!=-1) zos.write(buffer,0,n);
+                          zos.closeEntry();
+                      }
+                      if(!zip.isFile() || zip.length()<=0) throw new IOException("ZIP is empty");
+                      Uri uri=FileProvider.getUriForFile(this,"com.chroniclesoftheabyss.game.fileprovider",zip);
                       Intent send=new Intent(Intent.ACTION_SEND);
-                      send.setType("*/*");
+                      send.setType("application/zip");
                       send.putExtra(Intent.EXTRA_STREAM,uri);
                       send.putExtra(Intent.EXTRA_TITLE,"ChroniclesOfTheAbyss.apk.zip");
                       send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
