@@ -171,13 +171,14 @@ jobs:
                       try(FileInputStream in=new FileInputStream(source);FileOutputStream out=new FileOutputStream(apk)){
                           byte[] buffer=new byte[8192]; int n; while((n=in.read(buffer))!=-1) out.write(buffer,0,n);
                       }
+                      if(!apk.isFile() || apk.length()<=0) throw new IOException("APK copy is empty");
                       Uri uri=FileProvider.getUriForFile(this,"com.chroniclesoftheabyss.game.fileprovider",apk);
                       Intent send=new Intent(Intent.ACTION_SEND);
-                      send.setType("application/vnd.android.package-archive");
+                      send.setType("*/*");
                       send.putExtra(Intent.EXTRA_STREAM,uri);
-                      send.putExtra(Intent.EXTRA_TITLE,"Хроники Бездны");
-                      send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                      send.setClipData(ClipData.newRawUri("Хроники Бездны",uri));
+                      send.putExtra(Intent.EXTRA_TITLE,"ChroniclesOfTheAbyss.apk");
+                      send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                      send.setClipData(ClipData.newRawUri("ChroniclesOfTheAbyss.apk",uri));
                       startActivity(Intent.createChooser(send,"Поделиться игрой"));
                   }catch(Exception e){ Toast.makeText(this,"Не удалось подготовить игру для отправки",Toast.LENGTH_LONG).show(); }
               }
