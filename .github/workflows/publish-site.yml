@@ -1,0 +1,56 @@
+name: Publish game website
+
+on:
+  workflow_run:
+    workflows: ["Build APK"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ChroniclesOfTheAbyss-Release
+          path: release
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Prepare website files
+        shell: bash
+        run: |
+          set -e
+          test -s release/ChroniclesOfTheAbyss-release.apk
+          mkdir -p public
+          cp site/index.html public/index.html
+          cp release/ChroniclesOfTheAbyss-release.apk public/ChroniclesOfTheAbyss.apk
+          cp release/ChroniclesOfTheAbyss-release.apk.sha256 public/ChroniclesOfTheAbyss.apk.sha256
+          cd release
+          zip -q ChroniclesOfTheAbyss.apk.zip ChroniclesOfTheAbyss-release.apk
+          cd ..
+          cp release/ChroniclesOfTheAbyss.apk.zip public/ChroniclesOfTheAbyss.apk.zip
+          printf '%s\n' 'ChroniclesOfTheAbyss.apk.zip' > public/.nojekyll
+
+      - name: Publish website branch
+        shell: bash
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --orphan site
+          git rm -rf . || true
+          cp -r public/. .
+          git add .
+          git commit -m "Обновить официальный сайт игры"
+          git push origin site --force
