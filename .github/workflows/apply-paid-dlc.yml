@@ -1,0 +1,28 @@
+name: Apply paid DLC v1
+
+on:
+  push:
+    paths:
+      - DLC_APPLY_TRIGGER.txt
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !startsWith(github.event.head_commit.message, 'Apply paid DLC v1') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply DLC patch
+        run: python3 tools/apply_dlc_v1.py
+      - name: Commit game.html
+        run: |
+          rm -f DLC_APPLY_TRIGGER.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add game.html
+          git add -u DLC_APPLY_TRIGGER.txt
+          git diff --cached --quiet && exit 0
+          git commit -m "Apply paid DLC v1"
+          git push
