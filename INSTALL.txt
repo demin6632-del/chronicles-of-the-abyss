@@ -1,0 +1,12 @@
+Pokoritel_Bashni_Offline_Deluxe_1.7.1
+
+Установка:
+1. Клонировать или скачать проект.
+2. Открыть Android-проект в Android Studio.
+3. Выполнить синхронизацию Gradle.
+4. Собрать APK через Build > Build APK.
+
+Сборка через GitHub Actions:
+Actions → Build APK → Run workflow.
+
+После успешной сборки APK будет доступен в Artifacts.
