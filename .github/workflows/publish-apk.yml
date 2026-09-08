@@ -31,12 +31,12 @@ jobs:
         shell: bash
         run: |
           set -e
-          test -s release/ChroniclesOfTheAbyss-release.apk
+          test -s release/ChroniclesOfTheAbyss.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch --orphan downloads
           git rm -rf . || true
-          cp release/ChroniclesOfTheAbyss-release.apk ChroniclesOfTheAbyss.apk
+          cp release/ChroniclesOfTheAbyss.apk ChroniclesOfTheAbyss.apk
           git add ChroniclesOfTheAbyss.apk
           git commit -m "Обновить APK для прямого скачивания"
           git push origin downloads --force
