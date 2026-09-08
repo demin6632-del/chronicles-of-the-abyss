@@ -5,220 +5,36 @@ on:
   push:
     branches: [ main ]
 
-env:
-  APP_ID: com.chroniclesoftheabyss.game
-  APP_NAME: Хроники Бездны
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Java 17
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-      - name: Set up Android SDK
+
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-      - name: Prepare permanent Release signing key
-        shell: bash
-        env:
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+
+      - name: Build debug APK
         run: |
-          if [ -z "${RELEASE_KEYSTORE_BASE64:-}" ]; then echo "ERROR: RELEASE_KEYSTORE_BASE64 is not configured."; exit 1; fi
-          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > release.keystore
-          test -s release.keystore
-      - name: Create Android project
-        shell: bash
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+
+      - name: Prepare APK
         run: |
-          mkdir -p app/src/main/java/com/chroniclesoftheabyss/game app/src/main/assets/game app/src/main/res/values app/src/main/res/drawable app/src/main/res/xml
-          cp game.html app/src/main/assets/game/game.html
-          base64 --decode assets/app_icon.png.b64 > app/src/main/res/drawable/app_icon.png
-          base64 --decode assets/splash.png.b64 > app/src/main/res/drawable/splash.png
-          cat > settings.gradle <<'EOT'
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
-          rootProject.name = 'ChroniclesOfTheAbyss'
-          include ':app'
-          EOT
-          cat > gradle.properties <<'EOT'
-          android.useAndroidX=true
-          android.enableJetifier=true
-          EOT
-          cat > build.gradle <<'EOT'
-          plugins { id 'com.android.application' version '8.7.3' apply false }
-          EOT
-          cat > app/build.gradle <<'EOT'
-          plugins { id 'com.android.application' }
-          def releaseVersionCode = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as Integer
-          def releaseVersionName = "1.${releaseVersionCode}"
-          android {
-              namespace 'com.chroniclesoftheabyss.game'
-              compileSdk 35
-              defaultConfig {
-                  applicationId 'com.chroniclesoftheabyss.game'
-                  minSdk 23
-                  targetSdk 35
-                  versionCode releaseVersionCode
-                  versionName releaseVersionName
-              }
-              signingConfigs {
-                  release {
-                      storeFile file('../release.keystore')
-                      storePassword System.getenv('RELEASE_STORE_PASSWORD')
-                      keyAlias System.getenv('RELEASE_KEY_ALIAS')
-                      keyPassword System.getenv('RELEASE_KEY_PASSWORD')
-                  }
-              }
-              buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release } }
-          }
-          dependencies { implementation 'androidx.core:core:1.15.0' }
-          EOT
-          cat > app/src/main/AndroidManifest.xml <<'EOT'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <application android:theme="@style/AppTheme" android:label="Хроники Бездны" android:icon="@drawable/app_icon" android:roundIcon="@drawable/app_icon" android:resizeableActivity="true">
-                  <provider
-                      android:name="androidx.core.content.FileProvider"
-                      android:authorities="com.chroniclesoftheabyss.game.fileprovider"
-                      android:exported="false"
-                      android:grantUriPermissions="true">
-                      <meta-data
-                          android:name="android.support.FILE_PROVIDER_PATHS"
-                          android:resource="@xml/file_paths" />
-                  </provider>
-                  <activity android:name=".MainActivity" android:screenOrientation="unspecified" android:exported="true">
-                      <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOT
-          cat > app/src/main/res/xml/file_paths.xml <<'EOT'
-          <?xml version="1.0" encoding="utf-8"?>
-          <paths xmlns:android="http://schemas.android.com/apk/res/android">
-              <cache-path name="shared_apk" path="shared/" />
-          </paths>
-          EOT
-          cat > app/src/main/res/values/styles.xml <<'EOT'
-          <resources><style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:windowActionModeOverlay">true</item><item name="android:colorAccent">#7c4dff</item><item name="android:navigationBarColor">#07111f</item><item name="android:statusBarColor">#07111f</item><item name="android:windowLightStatusBar">false</item><item name="android:windowBackground">@drawable/splash</item></style></resources>
-          EOT
-          cat > app/src/main/java/com/chroniclesoftheabyss/game/MainActivity.java <<'EOT'
-          package com.chroniclesoftheabyss.game;
-          import android.app.Activity;
-          import android.content.ClipData;
-          import android.content.Intent;
-          import android.graphics.Color;
-          import android.net.Uri;
-          import android.os.Bundle;
-          import android.view.ViewGroup;
-          import android.webkit.JavascriptInterface;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          import android.widget.FrameLayout;
-          import android.widget.ImageView;
-          import android.widget.Toast;
-          import androidx.core.content.FileProvider;
-          import java.io.File;
-          import java.io.FileInputStream;
-          import java.io.FileOutputStream;
-          import java.io.IOException;
-          import java.util.zip.ZipEntry;
-          import java.util.zip.ZipOutputStream;
-          public class MainActivity extends Activity {
-              private WebView webView;
-              @Override protected void onCreate(Bundle savedInstanceState){
-                  super.onCreate(savedInstanceState);
-                  FrameLayout root=new FrameLayout(this);
-                  root.setBackgroundColor(Color.BLACK);
-                  webView=new WebView(this);
-                  webView.setWebViewClient(new WebViewClient(){
-                      @Override public void onPageFinished(WebView view,String url){ super.onPageFinished(view,url); injectShareButton(); }
-                  });
-                  WebSettings settings=webView.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  settings.setAllowFileAccess(true);
-                  settings.setAllowContentAccess(true);
-                  webView.addJavascriptInterface(new AndroidBridge(),"AndroidBridge");
-                  root.addView(webView,new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
-                  ImageView splash=new ImageView(this);
-                  splash.setImageResource(com.chroniclesoftheabyss.game.R.drawable.splash);
-                  splash.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                  root.addView(splash,new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
-                  setContentView(root);
-                  webView.loadUrl("file:///android_asset/game/game.html");
-                  splash.postDelayed(()->splash.animate().alpha(0f).setDuration(350).withEndAction(()->root.removeView(splash)).start(),1000);
-              }
-              private void injectShareButton(){
-                  String js="(function(){if(document.getElementById('androidShareButton'))return;var b=document.createElement('button');b.id='androidShareButton';b.type='button';b.textContent='↗';b.title='Поделиться игрой';b.setAttribute('aria-label','Поделиться игрой');b.style.cssText='position:fixed;right:72px;bottom:18px;z-index:100;width:48px;height:48px;border:1px solid #26334d;border-radius:50%;background:#111827;color:#eef2ff;font-size:25px;font-weight:900;box-shadow:0 8px 24px rgba(0,0,0,.35);touch-action:manipulation;';b.onclick=function(){AndroidBridge.shareGame();};document.body.appendChild(b);})();";
-                  webView.evaluateJavascript(js,null);
-              }
-              public class AndroidBridge{
-                  @JavascriptInterface public void shareGame(){ runOnUiThread(()->shareInstalledApk()); }
-              }
-              private void shareInstalledApk(){
-                  try{
-                      File dir=new File(getCacheDir(),"shared");
-                      if(!dir.exists()&&!dir.mkdirs()) throw new IOException("Cannot create share directory");
-                      File apk=new File(dir,"ChroniclesOfTheAbyss.apk");
-                      File zip=new File(dir,"ChroniclesOfTheAbyss.apk.zip");
-                      File source=new File(getApplicationInfo().sourceDir);
-                      try(FileInputStream in=new FileInputStream(source);FileOutputStream out=new FileOutputStream(apk)){
-                          byte[] buffer=new byte[8192]; int n; while((n=in.read(buffer))!=-1) out.write(buffer,0,n);
-                      }
-                      if(!apk.isFile() || apk.length()<=0) throw new IOException("APK copy is empty");
-                      try(FileInputStream in=new FileInputStream(apk);FileOutputStream out=new FileOutputStream(zip);ZipOutputStream zos=new ZipOutputStream(out)){
-                          ZipEntry entry=new ZipEntry("ChroniclesOfTheAbyss.apk");
-                          zos.putNextEntry(entry);
-                          byte[] buffer=new byte[8192]; int n; while((n=in.read(buffer))!=-1) zos.write(buffer,0,n);
-                          zos.closeEntry();
-                      }
-                      if(!zip.isFile() || zip.length()<=0) throw new IOException("ZIP is empty");
-                      Uri uri=FileProvider.getUriForFile(this,"com.chroniclesoftheabyss.game.fileprovider",zip);
-                      Intent send=new Intent(Intent.ACTION_SEND);
-                      send.setType("application/zip");
-                      send.putExtra(Intent.EXTRA_STREAM,uri);
-                      send.putExtra(Intent.EXTRA_TITLE,"ChroniclesOfTheAbyss.apk.zip");
-                      send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-                      send.setClipData(ClipData.newRawUri("ChroniclesOfTheAbyss.apk.zip",uri));
-                      startActivity(Intent.createChooser(send,"Поделиться игрой"));
-                  }catch(Exception e){ Toast.makeText(this,"Не удалось подготовить игру для отправки",Toast.LENGTH_LONG).show(); }
-              }
-              @Override public void onBackPressed(){ if(webView.canGoBack()) webView.goBack(); else super.onBackPressed(); }
-          }
-          EOT
-      - name: Verify signing secrets
-        shell: bash
-        env:
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: test -n "${RELEASE_STORE_PASSWORD:-}" && test -n "${RELEASE_KEY_ALIAS:-}" && test -n "${RELEASE_KEY_PASSWORD:-}"
-      - name: Build release APK
-        env:
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: gradle --no-daemon assembleRelease
-      - name: Rename release APK
-        run: cp app/build/outputs/apk/release/app-release.apk ChroniclesOfTheAbyss-release.apk
-      - name: Generate SHA-256
-        run: sha256sum ChroniclesOfTheAbyss-release.apk > ChroniclesOfTheAbyss-release.apk.sha256
-      - name: Upload release APK
+          cp app/build/outputs/apk/debug/app-debug.apk ChroniclesOfTheAbyss.apk
+          sha256sum ChroniclesOfTheAbyss.apk > ChroniclesOfTheAbyss.apk.sha256
+
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ChroniclesOfTheAbyss-Release
           path: |
-            ChroniclesOfTheAbyss-release.apk
-            ChroniclesOfTheAbyss-release.apk.sha256
-      - name: Remove signing key
-        if: always()
-        run: rm -f release.keystore
+            ChroniclesOfTheAbyss.apk
+            ChroniclesOfTheAbyss.apk.sha256
