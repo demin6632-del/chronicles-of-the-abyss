@@ -1,0 +1,8 @@
+Pokoritel Bashni Offline Deluxe 1.7.1
+
+Installation:
+1. Build APK with Android Studio or GitHub Actions.
+2. Install APK on Android device.
+3. Launch the game.
+
+Internet is not required for gameplay.
