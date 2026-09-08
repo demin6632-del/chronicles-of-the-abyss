@@ -21,14 +21,22 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Find Gradle wrapper
+        run: |
+          find . -name gradlew -print
+
       - name: Build debug APK
         run: |
-          chmod +x ./gradlew
+          GRADLEW=$(find . -name gradlew | head -n 1)
+          chmod +x "$GRADLEW"
+          DIR=$(dirname "$GRADLEW")
+          cd "$DIR"
           ./gradlew assembleDebug
 
       - name: Prepare APK
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk ChroniclesOfTheAbyss.apk
+          APK=$(find . -path '*build/outputs/apk/debug/app-debug.apk' | head -n 1)
+          cp "$APK" ChroniclesOfTheAbyss.apk
           sha256sum ChroniclesOfTheAbyss.apk > ChroniclesOfTheAbyss.apk.sha256
 
       - name: Upload APK Artifact
