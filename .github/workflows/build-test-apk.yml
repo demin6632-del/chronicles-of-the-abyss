@@ -30,12 +30,20 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Prepare tower game assets
+      - name: Prepare existing game and integrate exploration
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
         run: |
           mkdir -p app/src/main/assets
-          cp ../tower_game.html app/src/main/assets/tower_game.html
-          cp ../tower_exploration.html app/src/main/assets/game.html
+          cp ../tower_game.html app/src/main/assets/game.html
+          python - <<'PY'
+          from pathlib import Path
+          game = Path('app/src/main/assets/game.html')
+          patch = Path('../tower_exploration_patch.js').read_text(encoding='utf-8')
+          html = game.read_text(encoding='utf-8')
+          if 'chronicles_tower_exploration_v2' not in html:
+              html = html.replace('</body>', '<script>\n' + patch + '\n</script></body>')
+          game.write_text(html, encoding='utf-8')
+          PY
 
       - name: Build debug APK
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
@@ -57,4 +65,4 @@ jobs:
             ChroniclesOfTheAbyss-test.apk
             ChroniclesOfTheAbyss-test.apk.sha256
 
-# Техническая сборка APK с исследованием этажей Башни.
+# Сборка использует существующую игру tower_game.html и внедряет исследование этажей поверх неё.
