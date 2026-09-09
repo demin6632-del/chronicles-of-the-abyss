@@ -26,6 +26,9 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install required Android SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
       - name: Setup Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -62,7 +65,8 @@ jobs:
             -PRELEASE_STORE_FILE=release.keystore \
             -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
             -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
-            -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
+            -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD" \
+            --stacktrace
 
       - name: Verify APK signature and output
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
