@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Создание нового ключа подписи Release APK прямо в GitHub Codespaces.
 # Ключ и пароли НЕ записываются в Git-репозиторий.
-# Скрипт использует JDK keytool и GitHub CLI (gh), уже доступные в Codespaces.
+# Скрипт использует JDK keytool и GitHub CLI (gh), доступные в Codespaces.
 
 REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 KEYSTORE="release.keystore"
@@ -19,6 +19,11 @@ if ! command -v gh >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v openssl >/dev/null 2>&1; then
+  echo "ОШИБКА: openssl не найден."
+  exit 1
+fi
+
 if ! gh auth status >/dev/null 2>&1; then
   echo "ОШИБКА: GitHub CLI не авторизован в Codespaces."
   exit 1
@@ -30,9 +35,9 @@ if [ -e "$KEYSTORE" ]; then
   exit 1
 fi
 
-# Один случайно созданный пароль используется и для keystore, и для ключа.
-# Он не выводится в консоль.
-STORE_PASS="$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 32)"
+# Случайный пароль: одинаковый для keystore и ключа.
+# Пароль не выводится в консоль.
+STORE_PASS="$(openssl rand -hex 32)"
 KEY_PASS="$STORE_PASS"
 
 keytool -genkeypair \
@@ -54,10 +59,7 @@ printf '%s' "$STORE_PASS" | gh secret set ANDROID_KEYSTORE_PASSWORD --repo "$REP
 printf '%s' "$ALIAS" | gh secret set ANDROID_KEY_ALIAS --repo "$REPO"
 printf '%s' "$KEY_PASS" | gh secret set ANDROID_KEY_PASSWORD --repo "$REPO"
 
-# Оставляем ключ только в текущем Codespace; он уже добавлен в .gitignore.
 chmod 600 "$KEYSTORE"
-
-# Удаляем секретное содержимое из переменных оболочки после отправки в GitHub.
 unset KEYSTORE_BASE64 STORE_PASS KEY_PASS
 
 echo
