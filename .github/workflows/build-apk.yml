@@ -45,6 +45,7 @@ jobs:
           test -n "$KEY_ALIAS" || { echo 'Missing ANDROID_KEY_ALIAS'; exit 1; }
           test -n "$KEY_PASSWORD" || { echo 'Missing ANDROID_KEY_PASSWORD'; exit 1; }
           echo "$KEYSTORE_BASE64" | base64 --decode > Pokoritel_Bashni_Offline_Deluxe_1.7.1/release.keystore
+          test -s Pokoritel_Bashni_Offline_Deluxe_1.7.1/release.keystore
 
       - name: Build signed Release APK
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
@@ -58,6 +59,12 @@ jobs:
             -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
             -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
             -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
+
+      - name: Verify APK signature and output
+        working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
+        run: |
+          test -s app/build/outputs/apk/release/app-release.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
 
       - name: Prepare APK
         run: |
