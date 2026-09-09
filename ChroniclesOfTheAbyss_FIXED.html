@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Chronicles Of The Abyss</title>
+<style>
+body{background:#05070d;color:white;font-family:Arial;margin:0}
+#game{max-width:700px;margin:auto;padding:15px}
+.screen{background:#111827;padding:20px;border-radius:15px;margin-top:20px}
+button{width:100%;padding:14px;margin:8px 0;background:#7c3aed;color:white;border:0;border-radius:10px}
+.hidden{display:none}.stat,.item{background:#1f2937;padding:8px;margin:5px;border-radius:8px}
+</style>
+</head>
+<body>
+<div id="game">
+<div id="menu" class="screen">
+<h1>Chronicles Of The Abyss</h1>
+<button onclick="startGame()">Начать</button>
+<button onclick="loadGame()">Загрузить</button>
+</div>
+<div id="create" class="screen hidden">
+<h2>Герой</h2><input id="heroName" placeholder="Имя">
+<select id="heroClass"><option value="warrior">Воин</option><option value="mage">Маг</option><option value="rogue">Разбойник</option></select>
+<button onclick="createHero()">Создать</button>
+</div>
+<div id="main" class="screen hidden">
+<h2 id="title"></h2><div class="stat">HP: <span id="hp"></span></div><div class="stat">Уровень: <span id="level"></span></div><div class="stat">Опыт: <span id="xp"></span></div><div class="stat">Этаж: <span id="floor"></span></div><div class="stat">Комната: <span id="room"></span>/5</div>
+<button onclick="explore()">Исследовать этаж</button><button onclick="saveGame()">Сохранить</button><div id="log"></div>
+</div>
+<div id="battle" class="screen hidden"><h2 id="enemy"></h2><button onclick="attack()">Атаковать</button><div id="battleLog"></div></div>
+</div>
+<script>
+let hero={name:"",class:"",level:1,hp:100,maxHp:100,attack:15,xp:0,floor:1,room:0,gold:0};let enemy=null;
+function screen(id){document.querySelectorAll('.screen').forEach(x=>x.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')}
+function addLog(t){document.getElementById('log').innerHTML='<div class="item">'+t+'</div>'+document.getElementById('log').innerHTML}
+function startGame(){screen('create')}
+function createHero(){hero.name=document.getElementById('heroName').value||'Герой';hero.class=document.getElementById('heroClass').value;if(hero.class==='warrior'){hero.maxHp=150;hero.hp=150;hero.attack=25}if(hero.class==='mage'){hero.maxHp=80;hero.hp=80;hero.attack=30}if(hero.class==='rogue'){hero.attack=20}update();saveGame();screen('main')}
+function update(){title.innerHTML=hero.name+' - '+hero.class;hp.innerHTML=hero.hp+'/'+hero.maxHp;level.innerHTML=hero.level;xp.innerHTML=hero.xp;floor.innerHTML=hero.floor;room.innerHTML=hero.room}
+function explore(){if(hero.room>=5){hero.floor++;hero.room=0;addLog('🏰 Этаж '+hero.floor+' открыт.')}hero.room++;const events=[{type:'battle',text:'⚔️ В коридоре появляется враг.'},{type:'gold',text:'📦 Найден тайник: +25 золота.',value:25},{type:'heal',text:'🗿 Алтарь восстанавливает 25 HP.',value:25},{type:'trap',text:'⚠️ Ловушка наносит 10 HP.',value:10},{type:'xp',text:'📜 Найдены древние записи: +20 опыта.',value:20}];const e=events[Math.floor(Math.random()*events.length)];addLog(e.text);if(e.type==='battle'){enemy={name:'Теневой волк — этаж '+hero.floor,hp:40+hero.floor*8};document.getElementById('enemy').innerHTML=enemy.name+' HP:'+enemy.hp;update();saveGame();screen('battle');return}if(e.type==='gold')hero.gold+=e.value;if(e.type==='heal')hero.hp=Math.min(hero.maxHp,hero.hp+e.value);if(e.type==='trap')hero.hp=Math.max(1,hero.hp-e.value);if(e.type==='xp')hero.xp+=e.value;update();saveGame()}
+function attack(){enemy.hp-=hero.attack;document.getElementById('battleLog').innerHTML+='<div class="item">Урон: '+hero.attack+'</div>';if(enemy.hp<=0){hero.xp+=25;addLog('🏆 Враг повержен. +25 опыта.');update();saveGame();screen('main')}else{hero.hp=Math.max(1,hero.hp-5);update()}}
+function saveGame(){localStorage.setItem('abyssSave',JSON.stringify(hero))}
+function loadGame(){let s=localStorage.getItem('abyssSave');if(s){hero=JSON.parse(s);update();screen('main')}}
+window.onload=update;
+</script>
+</body>
+</html>
