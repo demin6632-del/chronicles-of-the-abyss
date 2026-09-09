@@ -34,11 +34,12 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Prepare tower game asset
+      - name: Prepare tower game assets
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
         run: |
           mkdir -p app/src/main/assets
-          cp ../tower_game.html app/src/main/assets/game.html
+          cp ../tower_game.html app/src/main/assets/tower_game.html
+          cp ../tower_exploration.html app/src/main/assets/game.html
 
       - name: Check release signing secrets
         env:
