@@ -1,0 +1,7 @@
+# Локальные файлы подписи Android — никогда не коммитить
+release.keystore
+*.keystore
+*.jks
+*.p12
+release-signing.env
+*.apk
