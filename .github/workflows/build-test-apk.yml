@@ -66,4 +66,22 @@ jobs:
             ChroniclesOfTheAbyss-test.apk
             ChroniclesOfTheAbyss-test.apk.sha256
 
+      - name: Create complete project ZIP
+        run: |
+          rm -rf ChroniclesOfTheAbyss_PROJECT
+          mkdir -p ChroniclesOfTheAbyss_PROJECT/APK
+          cp ChroniclesOfTheAbyss-test.apk ChroniclesOfTheAbyss_PROJECT/APK/
+          cp ChroniclesOfTheAbyss-test.apk.sha256 ChroniclesOfTheAbyss_PROJECT/APK/
+          rsync -a --exclude='.git/' --exclude='*/build/' --exclude='ChroniclesOfTheAbyss_PROJECT/' ./ ChroniclesOfTheAbyss_PROJECT/
+          zip -qr ChroniclesOfTheAbyss_PROJECT.zip ChroniclesOfTheAbyss_PROJECT
+          unzip -t ChroniclesOfTheAbyss_PROJECT.zip
+          test -s ChroniclesOfTheAbyss_PROJECT.zip
+
+      - name: Upload complete project ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChroniclesOfTheAbyss-PROJECT
+          path: ChroniclesOfTheAbyss_PROJECT.zip
+
 # Сборка использует существующую игру tower_game.html и внедряет исследование этажей поверх неё.
+# Отдельно создаётся проверенный ZIP всего проекта с текущей APK.
