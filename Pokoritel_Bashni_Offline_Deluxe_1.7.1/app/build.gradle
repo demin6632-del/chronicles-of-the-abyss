@@ -14,13 +14,26 @@ android {
         versionName '2.0.0'
     }
 
+    signingConfigs {
+        release {
+            def storePath = project.findProperty('RELEASE_STORE_FILE')
+            def storePass = project.findProperty('RELEASE_STORE_PASSWORD')
+            def keyAliasValue = project.findProperty('RELEASE_KEY_ALIAS')
+            def keyPass = project.findProperty('RELEASE_KEY_PASSWORD')
+            if (storePath && storePass && keyAliasValue && keyPass) {
+                storeFile = file(storePath)
+                storePassword = storePass
+                keyAlias = keyAliasValue
+                keyPassword = keyPass
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Подпись Release подключается GitHub Actions из защищённых Secrets.
-            // Если Secrets ещё не заданы, workflow остановится до публикации APK,
-            // чтобы случайно не выпустить APK с неподходящим ключом.
             minifyEnabled false
             shrinkResources false
+            signingConfig signingConfigs.release
         }
     }
 }
