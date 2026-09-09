@@ -43,9 +43,10 @@ jobs:
           from pathlib import Path
           game = Path('app/src/main/assets/game.html')
           patch = Path('../tower_exploration_patch.js').read_text(encoding='utf-8')
+          boss_fix = Path('../tower_exploration_boss_fix.js').read_text(encoding='utf-8')
+          fog = Path('../tower_exploration_fog_v1.js').read_text(encoding='utf-8')
           html = game.read_text(encoding='utf-8')
-          if 'chronicles_tower_exploration_v2' not in html:
-              html = html.replace('</body>', '<script>\n' + patch + '\n</script></body>')
+          html = html.replace('</body>', '<script>\n' + patch + '\n' + boss_fix + '\n' + fog + '\n</script></body>')
           game.write_text(html, encoding='utf-8')
           PY
 
