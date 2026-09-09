@@ -52,3 +52,5 @@ jobs:
           path: |
             ChroniclesOfTheAbyss-test.apk
             ChroniclesOfTheAbyss-test.apk.sha256
+
+# Техническая сборка APK для проверки установки на Android.
