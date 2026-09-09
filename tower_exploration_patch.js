@@ -1,63 +1,37 @@
-/* Дополнение существующей игры: самостоятельное исследование этажей. */
+/* Полная замена интерфейса исследования этажей поверх существующей игры. Игрок видит только текущее место и неизвестные направления. */
 (function(){
 'use strict';
-const EX_KEY='chronicles_tower_exploration_v4';
-const ROOM_TYPES=[
-  ['🕯️','Тёмный коридор','Следы на камне ведут в неизвестность.'],
-  ['📦','Заброшенная кладовая','Среди обломков может что-то уцелеть.'],
-  ['⛩️','Святилище','Древний алтарь всё ещё хранит остаток силы.'],
-  ['🕳️','Трещина Бездны','Из разлома доносится холодный шёпот.'],
-  ['🗝️','Запечатанная дверь','Старая печать скрывает то, что находится за ней.'],
-  ['👁️','Зал стража','Кто-то наблюдает из темноты.'],
-  ['🧱','Разрушенный зал','Камни скрывают следы прежних путников.'],
-  ['🕸️','Заражённый проход','Воздух здесь пропитан странной порчей.']
+const EX_KEY='chronicles_tower_exploration_v5';
+const BATTLE_KEY='chronicles_tower_exploration_battle_v1';
+const TYPES=[
+  ['🕯️','Тёмный коридор','Каменные стены уходят во мрак.'],['📦','Заброшенная кладовая','Среди обломков что-то могло уцелеть.'],['⛩️','Святилище','Старый алтарь хранит остаток силы.'],['🕳️','Трещина Бездны','Из разлома доносится холодный шёпот.'],['🗝️','Запечатанная дверь','За древней печатью скрывается неизвестность.'],['👁️','Зал стража','Из темноты кто-то следит за каждым шагом.'],['🧱','Разрушенный зал','Следы прежних путников почти исчезли.'],['🕸️','Заражённый проход','Воздух здесь пропитан странной порчей.']
 ];
-let data={version:4,floors:{}};
-function saveExploration(){try{localStorage.setItem(EX_KEY,JSON.stringify(data))}catch(e){}}
-function loadExploration(){try{const x=JSON.parse(localStorage.getItem(EX_KEY));if(x&&x.floors)data=x}catch(e){}}
+const DIRS=['←','→','↑','↓'];
+let data={version:5,floors:{}};
+function saveData(){try{localStorage.setItem(EX_KEY,JSON.stringify(data))}catch(e){}}
+function loadData(){try{const x=JSON.parse(localStorage.getItem(EX_KEY));if(x&&x.version===5&&x.floors)data=x}catch(e){}}
 function shuffle(a){const x=a.slice();for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]]}return x}
 function makeFloor(f){
-  const rooms=shuffle(ROOM_TYPES).slice(0,7).map((r,i)=>({id:i,title:r[0]+' '+r[1],desc:r[2],done:false,reward:null}));
-  if(BOSSES[f]) rooms.push({id:7,title:'👑 Зал босса',desc:'Здесь находится страж этажа. Победа откроет путь наверх.',done:false,boss:true,reward:null});
-  else rooms.push({id:99,title:'🪜 Скрытая лестница',desc:'Ты нашёл путь на следующий этаж.',done:false,exit:true,reward:null});
-  return {floor:f,rooms,exitFound:false,completed:false,bossDefeated:false}
+  const nodes=Array.from({length:9},(_,i)=>({id:i,name:'Неизвестное место',desc:'',type:'unknown',visited:false,done:false,reward:null,pending:false,neighbors:[]}));
+  const edges=[[0,1],[0,2],[0,3],[1,4],[1,5],[2,5],[2,6],[3,6],[4,7],[5,7],[6,7],[7,8]];
+  edges.forEach(([a,b])=>{nodes[a].neighbors.push({to:b,dir:null});nodes[b].neighbors.push({to:a,dir:null})});
+  const shuffledTypes=shuffle(TYPES);
+  for(let i=1;i<8;i++){const t=shuffledTypes[(i-1)%shuffledTypes.length];nodes[i].name=t[0]+' '+t[1];nodes[i].desc=t[2];nodes[i].type=['combat','cache','shrine','abyss','special','combat','event'][i-1]||'event'}
+  nodes[0].name='🚪 Вход на этаж';nodes[0].desc='Ты вошёл на новый этаж. Дальше — неизвестность.';nodes[0].type='start';nodes[0].visited=true;
+  if(BOSSES[f]){nodes[8].name='👑 Зал стража этажа';nodes[8].desc='Здесь скрывается страж этого этажа.';nodes[8].type='boss'}else{nodes[8].name='🪜 Лестница вверх';nodes[8].desc='Ты обнаружил путь выше.';nodes[8].type='exit'}
+  assignDirections(nodes);return {floor:f,nodes,current:0,exitFound:false,completed:false,bossDefeated:false};
 }
-function floorData(f){if(!data.floors[f]){data.floors[f]=makeFloor(f);saveExploration()}return data.floors[f]}
-function exploredCount(f){return floorData(f).rooms.filter(r=>r.done).length}
-function rewardRoom(f,r){
-  const h=state.hero,roll=Math.random();
-  if(roll<.20){const gold=8+Math.floor(Math.random()*18)+f;h.gold+=gold;r.reward='+'+gold+' 🪙';log('Исследование: найден тайник с '+gold+' 🪙.','good')}
-  else if(roll<.36){const heal=Math.max(8,Math.floor(maxHp()*.12));h.hp=Math.min(maxHp(),h.hp+heal);r.reward='+'+heal+' HP';log('Исследование: найдено лекарство. +'+heal+' HP.','good')}
-  else if(roll<.52){const xp=10+f*2;gainXP(xp);r.reward='+'+xp+' XP';log('Исследование: древняя надпись дала '+xp+' XP.','good')}
-  else if(roll<.68){h.potions++;r.reward='+1 🧪';log('Исследование: найдено зелье.','good')}
-  else if(roll<.82){const dmg=Math.max(1,4+Math.floor(f/3)-def());h.hp=Math.max(1,h.hp-dmg);r.reward='-'+dmg+' HP';log('Исследование: ловушка нанесла '+dmg+' урона.','combat')}
-  else{const xp=6+f;gainXP(xp);r.reward='+'+xp+' XP';log('Исследование: найдено древнее знание. +'+xp+' XP.','good')}
-}
-function searchRoom(i){
-  if(state.screen!=='explore'||!state.hero)return;
-  const d=floorData(state.floor),r=d.rooms[i];if(!r||r.done)return;
-  if(r.exit){r.done=true;d.exitFound=true;d.completed=true;r.reward='Путь открыт';log('Ты обнаружил скрытую лестницу на следующий этаж.','good')}
-  else if(r.boss){log('Ты входишь в зал босса. Победа откроет путь наверх.','combat');saveExploration();save();enterFloor();return}
-  else{r.done=true;rewardRoom(state.floor,r)}
-  saveExploration();save();render()
-}
-function startFloorAscent(){
-  const f=state.floor,d=floorData(f);
-  if(f>=50){log('Ты достиг вершины Башни.','good');saveExploration();save();go('tower');return}
-  if(!d.exitFound)return;
-  state.floor=f+1;
-  state.screen='tower';
-  log('⬆️ Ты поднялся на этаж '+state.floor+'.','good');
-  saveExploration();save();render()
-}
+function assignDirections(nodes){nodes.forEach(n=>{const dirs=shuffle(DIRS);n.neighbors.forEach((e,i)=>e.dir=dirs[i])})}
+function floorData(f){if(!data.floors[f]){data.floors[f]=makeFloor(f);saveData()}return data.floors[f]}
+function discoverNode(n){n.visited=true;return n}
+function rewardNode(f,n){const h=state.hero,roll=Math.random();if(n.type==='cache'||roll<.24){const gold=8+Math.floor(Math.random()*18)+f;h.gold+=gold;n.reward='+'+gold+' 🪙';log('Исследование: найден тайник с '+gold+' 🪙.','good')}else if(n.type==='shrine'||roll<.42){const heal=Math.max(8,Math.floor(maxHp()*.15));h.hp=Math.min(maxHp(),h.hp+heal);n.reward='+'+heal+' HP';log('Исследование: древнее святилище восстановило '+heal+' HP.','good')}else if(n.type==='abyss'||roll<.58){const xp=10+f*2;gainXP(xp);n.reward='+'+xp+' XP';log('Исследование: найдено знание Бездны. +'+xp+' XP.','good')}else if(roll<.72){h.potions++;n.reward='+1 🧪';log('Исследование: найдено зелье.','good')}else if(roll<.84){const dmg=Math.max(1,4+Math.floor(f/3)-def());h.hp=Math.max(1,h.hp-dmg);n.reward='-'+dmg+' HP';log('Исследование: скрытая ловушка нанесла '+dmg+' урона.','combat')}else{const xp=6+f;gainXP(xp);n.reward='+'+xp+' XP';log('Исследование: найден древний след. +'+xp+' XP.','good')}}
+function resolveNode(n){if(n.done||n.pending)return;if(n.type==='exit'){n.done=true;floorData(state.floor).exitFound=true;floorData(state.floor).completed=true;log('🪜 Ты обнаружил путь на следующий этаж.','good')}else if(n.type==='boss'){n.pending=true;localStorage.setItem(BATTLE_KEY,String(state.floor));log('👑 Ты входишь в неизвестный зал. Внутри тебя ждёт страж этажа.','combat');saveData();save();enterFloor();return}else if(n.type==='combat'){n.pending=true;localStorage.setItem(BATTLE_KEY,String(state.floor));log('⚔️ В темноте раздаётся движение. Ты входишь в неизвестное помещение.','combat');saveData();save();enterFloor();return}else{n.done=true;rewardNode(state.floor,n)}saveData();save();render()}
+function moveTower(direction){if(state.screen!=='explore'||!state.hero)return;const d=floorData(state.floor),cur=d.nodes[d.current],edge=cur.neighbors.find(e=>e.dir===direction);if(!edge)return;const n=discoverNode(d.nodes[edge.to]);d.current=n.id;log('Ты идёшь '+direction+' и открываешь новый участок этажа.','good');resolveNode(n)}
+function startFloorAscent(){const f=state.floor,d=floorData(f);if(f>=50){log('🏆 Ты достиг вершины Башни.','good');saveData();save();go('tower');return}if(!d.exitFound&&!d.bossDefeated)return;state.floor=f+1;state.screen='tower';log('⬆️ Ты поднялся на этаж '+state.floor+'.','good');saveData();save();render()}
 function openExploration(){if(!state.hero||state.floor>50)return;floorData(state.floor);state.screen='explore';save();render()}
-function explorationScreen(){
-  const f=state.floor,d=floorData(f),count=exploredCount(f),total=d.rooms.length,pct=Math.floor(count/total*100),boss=!!BOSSES[f];
-  return `<div class="card"><h2>🗺️ Этаж ${f}: исследование</h2><div class="notice"><b>${boss?'Опасный этаж босса':'Самостоятельная экспедиция'}</b><br><span class="muted">Исследуй этаж, принимай решения и найди путь наверх. Уже найденные места не повторяются.</span></div><div class="small muted">Исследовано: ${count}/${total} • ${pct}%</div><div class="bar" style="margin:7px 0 10px"><i style="width:${pct}%;background:var(--accent)"></i></div>${d.rooms.map((r,i)=>`<button class="choice ${r.done?'active':''}" ${r.done?'disabled':''} onclick="searchTowerRoom(${i})"><b>${r.title}${r.done?' ✅':''}</b><br><span class="small muted">${r.done?(r.reward||'Место исследовано.'):(r.desc)}</span></button>`).join('')}${d.exitFound?`<div class="notice"><b>🪜 Путь наверх найден.</b><br><span class="small muted">Ты можешь покинуть этаж и продолжить восхождение.</span></div>${f<50?`<button class="btn primary" onclick="startTowerAscent()">⬆️ Подняться на этаж ${f+1}</button>`:`<button class="btn primary" onclick="startTowerAscent()">🏆 Завершить покорение Башни</button>`}`:`<div class="notice"><span class="muted">🪜 Лестница пока не найдена. Продолжай исследование.</span></div>`}<button class="btn" onclick="go('tower')">↩️ Вернуться к этажу</button></div>`
-}
-const originalTower=tower;
-window.tower=function(){const html=originalTower();if(!state.hero)return html;return html.replace(/<button class="btn primary" onclick="enterFloor\(\)">⬆️ Покорять этаж [^<]+<\/button>/,'<button class="btn primary" onclick="openExploration()">🗺️ Исследовать этаж '+state.floor+'</button>')}
-const originalRender=render;
-window.render=function(){if(state.screen==='explore'){document.getElementById('app').innerHTML=header()+`<main id="screen">${explorationScreen()}</main>`+'<footer><div class="grid3"><button class="btn" onclick="go(\'tower\')">🏰 Башня</button><button class="btn" onclick="go(\'character\')">👤 Герой</button><button class="btn" onclick="go(\'inventory\')">🎒 Инвентарь</button></div></footer>';return}return originalRender()}
-window.searchTowerRoom=searchRoom;window.startTowerAscent=startFloorAscent;window.openExploration=openExploration;loadExploration()
+function finishBattleIfReturned(){const pf=Number(localStorage.getItem(BATTLE_KEY)||0);if(!pf||!state.hero||state.floor!==pf)return;const d=data.floors[pf];if(!d)return;const n=d.nodes.find(x=>x.pending);if(!n)return;if(state.screen==='tower'&&state.hero.hp>0&&!state.enemy){n.pending=false;n.done=true;if(n.type==='boss'){d.bossDefeated=true;d.exitFound=true;d.completed=true;n.reward='Босс побеждён';log('👑 Страж этажа повержен. Путь наверх открыт.','good')}else{n.reward='Встреча завершена';log('⚔️ Опасность устранена. Путь исследования продолжается.','good')}localStorage.removeItem(BATTLE_KEY);saveData();save()}}
+function explorationScreen(){const f=state.floor,d=floorData(f),n=d.nodes[d.current],known=d.nodes.filter(x=>x.visited).length,buttons=n.neighbors.map(e=>{const target=d.nodes[e.to],knownTarget=target.visited;return `<button class="choice" onclick="moveTower('${e.dir}')"><b>${e.dir} Исследовать проход</b><br><span class="small muted">${knownTarget?'Ты уже видел, что находится в этом направлении.':'Ты не знаешь, что находится дальше.'}</span></button>`}).join('');return `<div class="card"><h2>🌑 Этаж ${f}</h2><div class="notice"><b>${n.name}</b><br><span class="muted">${n.desc}</span></div><div class="small muted">Ты исследовал ${known} участок${known===1?'':'а'} этого этажа. Остальное скрыто.</div><h3>Куда идти?</h3>${buttons}${d.exitFound?`<div class="notice"><b>🪜 Путь наверх найден.</b><br><span class="small muted">Ты сам обнаружил лестницу. Теперь можно подняться или продолжить исследование.</span></div><button class="btn primary" onclick="startTowerAscent()">⬆️ Подняться на этаж ${f+1}</button>`:''}<button class="btn" onclick="go('tower')">↩️ Вернуться к башне</button></div>`}
+const originalTower=tower;window.tower=function(){const html=originalTower();if(!state.hero)return html;return html.replace(/<button class="btn primary" onclick="enterFloor\(\)">⬆️ Покорять этаж [^<]+<\/button>/,'<button class="btn primary" onclick="openExploration()">🗺️ Исследовать этаж '+state.floor+'</button>')}
+const originalRender=render;window.render=function(){try{finishBattleIfReturned()}catch(e){}if(state.screen==='explore'){document.getElementById('app').innerHTML=header()+`<main id="screen">${explorationScreen()}</main>`+'<footer><div class="grid3"><button class="btn" onclick="go(\'tower\')">🏰 Башня</button><button class="btn" onclick="go(\'character\')">👤 Герой</button><button class="btn" onclick="go(\'inventory\')">🎒 Инвентарь</button></div></footer>';return}return originalRender()}
+window.moveTower=moveTower;window.startTowerAscent=startFloorAscent;window.openExploration=openExploration;loadData();
 })();
