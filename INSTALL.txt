@@ -4,7 +4,7 @@ CHRONICLES OF THE ABYSS — FINAL ANDROID BUILD
 1. Скачайте ChroniclesOfTheAbyss.apk из GitHub Actions → Build Release APK → Artifacts.
 2. На Android разрешите установку APK из используемого файлового менеджера/браузера, если система попросит.
 3. Установите APK и запустите «Хроники Бездны».
-4. Игра работает офлайн: игровой HTML и сохранения находятся внутри приложения. Внешние HTTP/HTTPS-запросы блокируются Android WebView.
+4. Игра работает офлайн: игровой HTML и сохранения находятся внутри приложения. Внешние HTTP/HTTPS-запросы не нужны для игры.
 
 Финальная прогрессия:
 Обычный забег → победа → New Game+ → повторные усиленные забеги.
@@ -18,8 +18,9 @@ CHRONICLES OF THE ABYSS — FINAL ANDROID BUILD
 
 Сборка:
 GitHub Actions → Build Test APK — контрольная debug-сборка.
-GitHub Actions → Build Release APK — подписанная release-сборка.
-Для release должны быть настроены secrets:
+GitHub Actions → Build Release APK — release-сборка.
+Если release secrets не настроены, CI создаёт временную подпись, достаточную для установки APK.
+Для стабильных обновлений поверх уже установленного APK рекомендуется один постоянный ключ подписи через secrets:
 ANDROID_KEYSTORE_BASE64
 ANDROID_KEYSTORE_PASSWORD
 ANDROID_KEY_ALIAS
@@ -27,6 +28,6 @@ ANDROID_KEY_PASSWORD
 
 Проверка:
 CI проверяет наличие game.html, отсутствие старого ключа chronicles_tower_save_v3,
-наличие New Game+ и «Бесконечная Бездна», сборку APK и подпись APK.
+наличие New Game+ и «Бесконечной Бездны», сборку APK и подпись APK.
 
 Версия Android-проекта: 4.0.0
