@@ -1568,4 +1568,114 @@ endScreen=function(win){const h=BASE_DLC_END_SCREEN(win);if(dlcUnlocked()&&win&&
 const BASE_DLC_CODEX=codexScreen;
 codexScreen=function(){if(dlcUnlocked())return BASE_DLC_CODEX();const original=CODEX_ENEMIES.slice();for(let i=CODEX_ENEMIES.length-1;i>=0;i--)if(CODEX_ENEMIES[i].dlc===DLC_ID)CODEX_ENEMIES.splice(i,1);let h;try{h=BASE_DLC_CODEX()}finally{CODEX_ENEMIES.splice(0,CODEX_ENEMIES.length,...original)}return h+`<div class="card"><h2>🌑 Пробуждение Бездны</h2><div class="cityStatus">🔒 Записи DLC скрыты до активации.</div><button class="btn" onclick="openDlcActivation()">🔓 Активировать DLC</button></div>`};
 
+</script>
+<!-- FINAL PROGRESSION v1: single progression, New Game+ and Endless Abyss -->
+<script>
+(function(){
+'use strict';
+const FINAL_META_KEY='chronicles_final_progression_v1';
+let FINAL_MODE='normal', FINAL_NG=0, FINAL_ENDLESS=0;
+function finalMeta(){try{return JSON.parse(localStorage.getItem(FINAL_META_KEY)||'{}')}catch(e){return {}}}
+function finalSaveMeta(x){try{localStorage.setItem(FINAL_META_KEY,JSON.stringify(x))}catch(e){}}
+function finalModeLabel(){
+  if(FINAL_MODE==='ngplus') return '⚡ New Game+ '+FINAL_NG;
+  if(FINAL_MODE==='endless') return '♾️ Бесконечная Бездна • цикл '+FINAL_ENDLESS;
+  return '🌑 Обычный забег';
+}
+window.setFinalMode=function(m){FINAL_MODE=m; if(m==='ngplus')FINAL_NG=Math.max(1,FINAL_NG); if(m==='endless')FINAL_ENDLESS=Math.max(1,FINAL_ENDLESS); render()};
+const baseStartScreen=window.startScreen;
+window.startScreen=function(){
+  const h=baseStartScreen();
+  const m=finalMeta();
+  return h+\`<div class="card"><h2>♾️ Финальная прогрессия</h2>
+  <div class="small muted">Старая V1-Башня отключена. Единственная игровая прогрессия — этот roguelike: обычный забег → New Game+ → бесконечная Бездна.</div>
+  <div class="cityStatus"><b>Статус</b><br><span class="small">${m.ngPlus||0} завершённых New Game+ • ${m.endless||0} циклов Бездны</span></div>
+  <div class="grid2">
+    <button class="btn ${FINAL_MODE==='normal'?'primary':''}" onclick="setFinalMode('normal')">🌑 Обычный</button>
+    <button class="btn ${FINAL_MODE==='ngplus'?'primary':''}" onclick="setFinalMode('ngplus')">⚡ New Game+</button>
+  </div>
+  <button class="btn ${FINAL_MODE==='endless'?'primary':''}" onclick="setFinalMode('endless')">♾️ Бесконечная Бездна</button></div>\`;
+};
+const baseOpenStart=window.openStart;
+window.openStart=function(cls){
+  const old=window.openModal;
+  const mode=finalModeLabel();
+  openModal(\`<h2>${CLASSES[cls].icon} ${CLASSES[cls].name}</h2>
+  <div class="cityStatus"><b>${mode}</b></div>
+  <div class="muted small">Seed можно повторить. Пусто = случайный.</div>
+  <input id="seed" placeholder="ABYSS-001">
+  <h3>Ascension</h3>
+  ${[0,1,2,3,4,5,6].map(a=>\`<button class="btn ${a===0?'primary':''}" onclick="startFinalRun('${cls}',${a},document.getElementById('seed').value)">A${a} — ${a?'+ '+a*7+'% силы врагов':'база'}</button>\`).join('')}
+  <button class="btn" onclick="closeModal()">Отмена</button>\`);
+};
+window.startFinalRun=function(cls,asc,seed){
+  const selected=FINAL_MODE;
+  const meta=finalMeta();
+  if(selected==='ngplus') asc=Math.max(asc,FINAL_NG);
+  if(selected==='endless') asc=Math.max(asc,Math.min(6,FINAL_ENDLESS-1));
+  window.__FINAL_PENDING={mode:selected,ng:FINAL_NG,endless:FINAL_ENDLESS};
+  closeModal();
+  startRun(cls,asc,String(seed||''));
+};
+const baseStartRun=window.startRun;
+window.startRun=function(cls,asc,seed){
+  baseStartRun(cls,asc,seed);
+  const p=window.__FINAL_PENDING||{mode:'normal',ng:0,endless:0};
+  S.finalMode=p.mode; S.finalNg=p.ng||0; S.finalEndless=p.endless||0;
+  if(S.finalMode==='ngplus') S.asc=Math.min(99,Math.max(S.asc||0,S.finalNg));
+  save(); render();
+};
+const baseStartCombat=window.startCombat;
+window.startCombat=function(elite){
+  baseStartCombat(elite);
+  if(S.finalMode==='ngplus'||S.finalMode==='endless'){
+    const scale=S.finalMode==='ngplus'?(1+S.finalNg*.10):(1+Math.max(0,S.finalEndless-1)*.12);
+    if(S.combat&&S.combat.enemy){const e=S.combat.enemy;e.max=e.hp=Math.max(1,Math.round(e.hp*scale));e.atk=Math.max(1,Math.round(e.atk*scale));e.def=Math.max(0,Math.round(e.def*scale));}
+    save();render();
+  }
+};
+const baseStartBoss=window.startBoss;
+window.startBoss=function(){
+  baseStartBoss();
+  if(S.finalMode==='ngplus'||S.finalMode==='endless'){
+    const scale=S.finalMode==='ngplus'?(1+S.finalNg*.10):(1+Math.max(0,S.finalEndless-1)*.12);
+    if(S.combat&&S.combat.enemy){const e=S.combat.enemy;e.max=e.hp=Math.max(1,Math.round(e.hp*scale));e.atk=Math.max(1,Math.round(e.atk*scale));e.def=Math.max(0,Math.round(e.def*scale));}
+    save();render();
+  }
+};
+function finalContinue(mode){
+  const meta=finalMeta();
+  if(mode==='ngplus'){
+    const next=(S.finalNg||0)+1; meta.ngPlus=next; finalSaveMeta(meta);
+    FINAL_MODE='ngplus'; FINAL_NG=next; FINAL_ENDLESS=0;
+  }else{
+    const next=(S.finalEndless||0)+1; meta.endless=next; finalSaveMeta(meta);
+    FINAL_MODE='endless'; FINAL_ENDLESS=next; FINAL_NG=0;
+  }
+  window.__FINAL_PENDING={mode:FINAL_MODE,ng:FINAL_NG,endless:FINAL_ENDLESS};
+  const cls=S.cls, asc=S.asc||0, seed=(mode==='ngplus'?'NGPLUS-':'ENDLESS-')+Date.now().toString(36).toUpperCase();
+  startRun(cls,mode==='ngplus'?Math.min(99,asc+1):Math.min(6,asc),seed);
+}
+window.startNewGamePlus=function(){finalContinue('ngplus')};
+window.startEndlessAbyss=function(){finalContinue('endless')};
+const baseEndScreen=window.endScreen;
+window.endScreen=function(win){
+  let h=baseEndScreen(win);
+  if(win){
+    h=h.replace('</div>\`}</div>','</div>\`}</div>');
+    h+=\`<div class="card"><h2>♾️ Продолжение</h2>
+      <button class="btn primary" onclick="startNewGamePlus()">⚡ Начать New Game+</button>
+      <button class="btn" onclick="startEndlessAbyss()">♾️ Продолжить в Бесконечную Бездну</button>
+    </div>\`;
+  }
+  return h;
+};
+const oldHeader=window.header;
+window.header=function(){
+  const h=oldHeader();
+  if(!S||!S.p)return h;
+  const label=S.finalMode==='ngplus'?'⚡ New Game+ '+(S.finalNg||1):S.finalMode==='endless'?'♾️ Бездна • цикл '+(S.finalEndless||1):'🌑 Обычный';
+  return h.replace('</header>',\`<div class="sub">${label}</div></header>\`);
+};
+})();
 </script></body></html>
