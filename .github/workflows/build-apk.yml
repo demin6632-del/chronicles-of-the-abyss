@@ -87,3 +87,5 @@ jobs:
           files: |
             ChroniclesOfTheAbyss.apk
             ChroniclesOfTheAbyss.apk.sha256
+
+# Final release CI trigger: verify signed APK path
