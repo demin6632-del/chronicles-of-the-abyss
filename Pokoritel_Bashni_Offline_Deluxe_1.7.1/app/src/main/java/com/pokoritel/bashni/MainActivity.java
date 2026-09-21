@@ -41,7 +41,9 @@ public class MainActivity extends Activity {
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(false);
         settings.setDatabaseEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        // Жёсткий офлайн-режим: игровой контент находится внутри APK.
+        settings.setBlockNetworkLoads(true);
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
