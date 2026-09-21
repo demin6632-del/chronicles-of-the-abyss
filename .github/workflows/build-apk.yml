@@ -62,7 +62,12 @@ jobs:
       - name: Build signed Release APK
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
         run: |
-          gradle --no-daemon clean assembleRelease             -PRELEASE_STORE_FILE=release.keystore             -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD"             -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS"             -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"             --stacktrace
+          gradle --no-daemon clean assembleRelease \
+            -PRELEASE_STORE_FILE=release.keystore \
+            -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
+            -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
+            -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD" \
+            --stacktrace
       - name: Verify APK signature and output
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
         run: |
