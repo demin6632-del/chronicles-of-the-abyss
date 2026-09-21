@@ -3,6 +3,7 @@ name: Build Release APK
 on:
   workflow_dispatch:
   push:
+    branches: [ main ]
     tags:
       - 'v*'
 
@@ -12,44 +13,31 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Install required Android SDK packages
+      - name: Install Android SDK
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-
       - name: Setup Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
-
-      - name: Prepare existing game and integrate exploration
+      - name: Package the single final game source
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
         run: |
           mkdir -p app/src/main/assets
-          cp ../tower_game.html app/src/main/assets/game.html
-          python - <<'PY'
-          from pathlib import Path
-          game = Path('app/src/main/assets/game.html')
-          patch = Path('../tower_exploration_patch.js').read_text(encoding='utf-8')
-          boss_fix = Path('../tower_exploration_boss_fix.js').read_text(encoding='utf-8')
-          fog = Path('../tower_exploration_fog_v1.js').read_text(encoding='utf-8')
-          html = game.read_text(encoding='utf-8')
-          html = html.replace('</body>', '<script>\n' + patch + '\n' + boss_fix + '\n' + fog + '\n</script></body>')
-          game.write_text(html, encoding='utf-8')
-          PY
-
+          cp ../game.html app/src/main/assets/game.html
+          test -s app/src/main/assets/game.html
+          ! grep -q "chronicles_tower_save_v3" app/src/main/assets/game.html
+          grep -q "New Game+" app/src/main/assets/game.html
+          grep -q "Бесконечная Бездна" app/src/main/assets/game.html
       - name: Check release signing secrets
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -63,7 +51,6 @@ jobs:
           test -n "$KEY_PASSWORD" || { echo 'Missing ANDROID_KEY_PASSWORD'; exit 1; }
           echo "$KEYSTORE_BASE64" | base64 --decode > Pokoritel_Bashni_Offline_Deluxe_1.7.1/release.keystore
           test -s Pokoritel_Bashni_Offline_Deluxe_1.7.1/release.keystore
-
       - name: Build signed Release APK
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
         env:
@@ -71,24 +58,16 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          gradle --no-daemon assembleRelease \
-            -PRELEASE_STORE_FILE=release.keystore \
-            -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
-            -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
-            -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD" \
-            --stacktrace
-
+          gradle --no-daemon clean assembleRelease             -PRELEASE_STORE_FILE=release.keystore             -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD"             -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS"             -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"             --stacktrace
       - name: Verify APK signature and output
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
         run: |
           test -s app/build/outputs/apk/release/app-release.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
-
       - name: Prepare APK
         run: |
           cp Pokoritel_Bashni_Offline_Deluxe_1.7.1/app/build/outputs/apk/release/app-release.apk ChroniclesOfTheAbyss.apk
           sha256sum ChroniclesOfTheAbyss.apk > ChroniclesOfTheAbyss.apk.sha256
-
       - name: Upload Release APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -96,7 +75,6 @@ jobs:
           path: |
             ChroniclesOfTheAbyss.apk
             ChroniclesOfTheAbyss.apk.sha256
-
       - name: Publish GitHub Release for tag
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
