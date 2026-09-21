@@ -32,12 +32,18 @@ jobs:
       - name: Package the single final game source
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
         run: |
+          set -e
           mkdir -p app/src/main/assets
           cp ../game.html app/src/main/assets/game.html
           test -s app/src/main/assets/game.html
           ! grep -q "chronicles_tower_save_v3" app/src/main/assets/game.html
           grep -q "New Game+" app/src/main/assets/game.html
           grep -q "Бесконечная Бездна" app/src/main/assets/game.html
+          ! grep -qi "navigator\.vibrate" app/src/main/assets/game.html
+          ! grep -qi "android\.permission\.VIBRATE" app/src/main/AndroidManifest.xml
+          ! grep -q "android.permission.INTERNET" app/src/main/AndroidManifest.xml
+          grep -q "setBlockNetworkLoads(true)" app/src/main/java/com/pokoritel/bashni/MainActivity.java
+          grep -q "file:///android_asset/game.html" app/src/main/java/com/pokoritel/bashni/MainActivity.java
       - name: Prepare release signing
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -62,12 +68,7 @@ jobs:
       - name: Build signed Release APK
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
         run: |
-          gradle --no-daemon clean assembleRelease \
-            -PRELEASE_STORE_FILE=release.keystore \
-            -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
-            -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
-            -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD" \
-            --stacktrace
+          gradle --no-daemon clean assembleRelease             -PRELEASE_STORE_FILE=release.keystore             -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD"             -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS"             -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"             --stacktrace
       - name: Verify APK signature and output
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
         run: |
