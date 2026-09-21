@@ -56,12 +56,11 @@ jobs:
             keytool -genkeypair -v -keystore Pokoritel_Bashni_Offline_Deluxe_1.7.1/release.keystore -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Chronicles of the Abyss, OU=Game, O=Chronicles, L=Unknown, S=Unknown, C=DE"
           fi
           test -s Pokoritel_Bashni_Offline_Deluxe_1.7.1/release.keystore
+          echo "ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
       - name: Build signed Release APK
         working-directory: Pokoritel_Bashni_Offline_Deluxe_1.7.1
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           gradle --no-daemon clean assembleRelease             -PRELEASE_STORE_FILE=release.keystore             -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD"             -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS"             -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"             --stacktrace
       - name: Verify APK signature and output
