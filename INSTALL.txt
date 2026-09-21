@@ -1,18 +1,32 @@
-Pokoritel_Bashni_Offline_Deluxe_1.7.1
+CHRONICLES OF THE ABYSS — FINAL ANDROID BUILD
 
-Установка и запуск:
+Установка APK:
+1. Скачайте ChroniclesOfTheAbyss.apk из GitHub Actions → Build Release APK → Artifacts.
+2. На Android разрешите установку APK из используемого файлового менеджера/браузера, если система попросит.
+3. Установите APK и запустите «Хроники Бездны».
+4. Игра работает офлайн: игровой HTML и сохранения находятся внутри приложения. Внешние HTTP/HTTPS-запросы блокируются Android WebView.
 
-1. Скачать или клонировать проект.
-2. Открыть Android-проект в Android Studio.
-3. Выполнить синхронизацию Gradle.
-4. Собрать APK через Build > Build APK.
-5. Установить APK на устройство Android.
+Финальная прогрессия:
+Обычный забег → победа → New Game+ → повторные усиленные забеги.
+Отдельно доступна «Бесконечная Бездна» с последовательными циклами и масштабированием сложности.
 
-Сборка через GitHub Actions:
-Actions → Build APK → Run workflow.
+Важно:
+- Старая V1-прогрессия «Покорение Башни» больше не используется сборкой.
+- В APK копируется только корневой game.html как единый источник игры.
+- Полноэкранный immersive-режим включается нативно в Android.
+- Вибрация при атаках не используется.
 
-После успешной сборки APK будет доступен в Artifacts.
+Сборка:
+GitHub Actions → Build Test APK — контрольная debug-сборка.
+GitHub Actions → Build Release APK — подписанная release-сборка.
+Для release должны быть настроены secrets:
+ANDROID_KEYSTORE_BASE64
+ANDROID_KEYSTORE_PASSWORD
+ANDROID_KEY_ALIAS
+ANDROID_KEY_PASSWORD
 
-Версия: 1.7.1
+Проверка:
+CI проверяет наличие game.html, отсутствие старого ключа chronicles_tower_save_v3,
+наличие New Game+ и «Бесконечная Бездна», сборку APK и подпись APK.
 
-Технический запуск CI: обновление файла для автоматического старта Build APK.
+Версия Android-проекта: 4.0.0
